@@ -1,0 +1,122 @@
+---
+title: "wordCloud"
+format: html
+editor: visual
+---
+
+```{r install_packages}
+install.packages(c("tidytext", "tidyverse", "here"))
+```
+```{r}
+library(tidytext)
+library(tidyverse)
+library(wordcloud)
+```
+
+```{r}
+here::here()
+```
+
+```{r}
+untidy_wordcloud_df <- read_csv(here::here("data", "wordcloudText.csv"))
+custom_stopwords_df <- read_csv(here::here("data", "custom_stopwords.csv"))
+```
+```{r}
+tidy_wordcloud_df <- untidy_wordcloud_df %>% 
+  unnest_tokens(word, text)
+  
+word_replacements <- list(
+  environment = c("environment", "environmental", "environmentally"),
+  natural = c("naturally", "natural"),
+  sustainable = c("sustainable", "sustainably"),
+  transport = c("transport", "transportation"),
+  meat = c("meat", "meats"),
+  food = c("food", "foods"),
+  add = c("add", "adds"),
+  require = c("require", "requires", "required"),
+  produce = c("produce", "produced", "produces"),
+  source = c("source", "sourced", "sources"),
+  package = c("package", "packaged"),
+  protein = c("protein", "proteins"),
+  gallon = c("gallon", "gallons"),
+  impact = c("impact", "impacts"),
+  restaurant = c("restaurant", "restaurants"),
+  vitamin = c("vitamin", "vitamins", "b12"),
+  cricket = c("cricket", "crickets"),
+  product = c("product", "products"),
+  insect = c("insect", "insects"),
+  alternative = c("alternative", "alternatives"),
+  locust = c("locust", "locusts"),
+  recipe = c("recipe", "recipes"),
+  superfood = c("superfood", "superfoods"),
+  efficient = c("efficient", "efficiently"),
+  nourish = c("nourish", "nourishing"),
+  expect = c("expect", "expected"),
+  produce = c("produce", "producers"),
+  include = c("include", "including"),
+  develop = c("develop", "developed", "developing"),
+  nutrition = c("nutrition", "nutritional", "nutrients"),
+  `new zealand` = c("zealand", "zealand's", "nz"),
+  sustainable = c("sustainable", "sustainability"),
+  environment = c("environment", "environmental"),
+  world = c("world", "worlds", "worldwide"),
+  taste = c("taste", "tastes"),
+  sell = c("sell", "sells"),
+  reduce = c("reduce", "reducing"),
+  raw = c("raw", "rawest"),
+  range = c("range", "ranges"),
+  new_zealand = c("zealand", "nz"),
+  litre = c("litre", "ltrs"),
+  kilogram = c("kilogram", "kg"),
+  innovate = c("innovate", "innovations", "innovative"),
+  human = c("human", "humans"),
+  grow = c("grow", "growing", "growth"),
+  gram = c("gram", "grams"),
+  `greenhouse gas` = c("greenhouse_gas", "greenhouse", "ghg", "co2"),
+  form = c("form", "forms", "formed"),
+  flour = c("flour", "flours"),
+  farm = c("farm", "farms", "farmed", "farming"),
+  eat = c("eat", "eating"),
+  diet = c("diet", "diets", "dietary"),
+  develop = c("develop", "developing"),
+  bring = c("bring", "bringing"),
+  breed = c("breed", "bred"),
+  body = c("body", "bodies"),
+  beautiful = c("beautiful", "beauty"),
+  age = c("age", "ages"),
+  `amino acids` = c("amino")
+)
+
+# Applying word replacements
+for (replacement in names(word_replacements)) {
+  tidy_wordcloud_df <- tidy_wordcloud_df %>%
+    mutate(word = case_when(
+      word %in% word_replacements[[replacement]] ~ replacement,
+      TRUE ~ word
+    ))
+}
+  
+tidy_wordcloud_df <- tidy_wordcloud_df %>%   
+  anti_join(custom_stopwords_df) %>% 
+  count(word) %>% 
+  arrange(desc(n))
+
+```
+```{r}
+tidy_wordcloud_df %>%
+  with(wordcloud(word, n, scale=c(4, .3)))
+```
+```{r}
+tidy_wordcloud_df %>%
+  mutate(word=factor(word, levels=word)) %>%
+  slice_head(n = 20) %>% 
+  ggplot(aes(x=word, y=n)) +
+  geom_point() + 
+  geom_segment( aes(x=word, xend=word, y=0, yend=n)) +
+  coord_flip()+
+  geom_point( size=4, color="orange") +
+  theme_classic() +
+  xlab("Top 20 Words") +
+  ylab("Count")
+```
+
