@@ -5,12 +5,13 @@ editor: visual
 ---
 
 ```{r install_packages}
-install.packages(c("tidytext", "tidyverse", "here"))
+install.packages(c("tidytext", "tidyverse", "here", "patchwork"))
 ```
 ```{r}
 library(tidytext)
 library(tidyverse)
 library(wordcloud)
+library(patchwork)
 ```
 
 ```{r}
@@ -22,13 +23,24 @@ untidy_wordcloud_df <- read_csv(here::here("data", "wordcloudText.csv"))
 custom_stopwords_df <- read_csv(here::here("data", "custom_stopwords.csv"))
 ```
 ```{r}
-tidy_wordcloud_df <- untidy_wordcloud_df %>% 
+tidy_words_df <- untidy_wordcloud_df %>% 
   unnest_tokens(word, text)
   
+company_replacements <- list(
+  Anteater = c("ANTEATER ABOUT PAGE"),
+  `Eat Crawlers` = c("CRAWLERS ABOUT PAGE"),
+  `Live Longer` = c("LIVE LONGER ABOUT PAGE"),
+  `NZ Naturally` = c("NZ NATURALLY ABOUT PAGE", "NZ NATURALLY CRICKET FLOUR"),  
+  `Good Pantry` = c("GOOD PANTRY CRICKET FLOUR", "GOOD PANTRY ABOUT PAGE"),
+  `Primal Future` = c("PRIMAL FUTURE CRICKET FLOUR", "PRIMAL FUTURE ABOUT/WHY EAT INSECTS PAGE"),
+  `Otago Locusts` = c("OTAGO LOCUSTS SUSTAINABLE BUSINESS NETWORK PROFILE"),
+  `Rebel Bakehouse` = c("Rebel Bakehouse")
+)
+
 word_replacements <- list(
   environment = c("environment", "environmental", "environmentally"),
   natural = c("naturally", "natural"),
-  sustainable = c("sustainable", "sustainably"),
+  sustainable = c("sustainable", "sustainably", "sustainability"),
   transport = c("transport", "transportation"),
   meat = c("meat", "meats"),
   food = c("food", "foods"),
@@ -58,7 +70,7 @@ word_replacements <- list(
   nutrition = c("nutrition", "nutritional", "nutrients"),
   `new zealand` = c("zealand", "zealand's", "nz"),
   sustainable = c("sustainable", "sustainability"),
-  environment = c("environment", "environmental"),
+  environment = c("environment", "environmental", "enviromental"),
   world = c("world", "worlds", "worldwide"),
   taste = c("taste", "tastes"),
   sell = c("sell", "sells"),
@@ -72,7 +84,7 @@ word_replacements <- list(
   human = c("human", "humans"),
   grow = c("grow", "growing", "growth"),
   gram = c("gram", "grams"),
-  `greenhouse gas` = c("greenhouse_gas", "greenhouse", "ghg", "co2"),
+  `greenhouse gas` = c("greenhouse_gas", "greenhouse", "ghg", "co2", "gases"),
   form = c("form", "forms", "formed"),
   flour = c("flour", "flours"),
   farm = c("farm", "farms", "farmed", "farming"),
@@ -88,26 +100,38 @@ word_replacements <- list(
 )
 
 # Applying word replacements
+for (replacement in names(company_replacements)) {
+  tidy_words_df <- tidy_words_df %>%
+    mutate(book = case_when(
+      book %in% company_replacements[[replacement]] ~ replacement,
+      TRUE ~ book
+    ))
+}
+
 for (replacement in names(word_replacements)) {
-  tidy_wordcloud_df <- tidy_wordcloud_df %>%
+  tidy_words_df <- tidy_words_df %>%
     mutate(word = case_when(
       word %in% word_replacements[[replacement]] ~ replacement,
       TRUE ~ word
     ))
 }
   
-tidy_wordcloud_df <- tidy_wordcloud_df %>%   
+tidy_words_df <- tidy_words_df %>% 
+  anti_join(custom_stopwords_df)
+
+tidy_wordcloud_df <- tidy_words_df %>%   
   anti_join(custom_stopwords_df) %>% 
   count(word) %>% 
   arrange(desc(n))
 
 ```
+
 ```{r}
 tidy_wordcloud_df %>%
   with(wordcloud(word, n, scale=c(4, .3)))
 ```
 ```{r}
-tidy_wordcloud_df %>%
+fig_word_count <- tidy_wordcloud_df %>%
   mutate(word=factor(word, levels=word)) %>%
   slice_head(n = 20) %>% 
   ggplot(aes(x=word, y=n)) +
@@ -118,5 +142,45 @@ tidy_wordcloud_df %>%
   theme_classic() +
   xlab("Top 20 Words") +
   ylab("Count")
+```
+
+```{r}
+fig_company_count <- tidy_words_df %>%
+  distinct(word, book, .keep_all = TRUE) %>%
+  group_by(word) %>%
+  summarise(count_of_companies = n_distinct(book)) %>% 
+  arrange(desc(count_of_companies)) %>% 
+  slice_head(n = 20) %>% 
+  ggplot(aes(x = reorder(word, count_of_companies), y = count_of_companies)) +
+  geom_point() + 
+  geom_segment(aes(x = word, xend = word, y = 0, yend = count_of_companies)) +
+  coord_flip() +
+  geom_point(size = 4, color = "orange") +
+  theme_classic() +
+  xlab("Top 20 Words") +
+  ylab("Count")
+
+```
+
+```{r}
+
+fig_marketing <- fig_word_count / fig_company_count
+
+fig_marketing <- fig_marketing + plot_annotation(tag_levels = 'A')
+
+ggsave(
+  "fig_marketing.png",
+  plot = fig_marketing,
+  device = png,
+  path = here::here("output"),
+  scale = 1,
+  width = 16.7,
+  height = 20.6,
+  units = c("cm"),
+  dpi = 300,
+  limitsize = TRUE
+)
+# 
+
 ```
 
