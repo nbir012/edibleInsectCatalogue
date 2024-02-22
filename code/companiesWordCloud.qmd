@@ -5,8 +5,9 @@ editor: visual
 ---
 
 ```{r install_packages}
-install.packages(c("tidytext", "tidyverse", "here", "patchwork"))
+#install.packages(c("tidytext", "tidyverse", "here", "patchwork"))
 ```
+
 ```{r}
 library(tidytext)
 library(tidyverse)
@@ -22,6 +23,7 @@ here::here()
 untidy_wordcloud_df <- read_csv(here::here("data", "wordcloudText.csv"))
 custom_stopwords_df <- read_csv(here::here("data", "custom_stopwords.csv"))
 ```
+
 ```{r}
 tidy_words_df <- untidy_wordcloud_df %>% 
   unnest_tokens(word, text)
@@ -130,6 +132,7 @@ tidy_wordcloud_df <- tidy_words_df %>%
 tidy_wordcloud_df %>%
   with(wordcloud(word, n, scale=c(4, .3)))
 ```
+
 ```{r}
 fig_word_count <- tidy_wordcloud_df %>%
   mutate(word=factor(word, levels=word)) %>%
@@ -141,7 +144,7 @@ fig_word_count <- tidy_wordcloud_df %>%
   geom_point( size=4, color="orange") +
   theme_classic() +
   xlab("Top 20 Words") +
-  ylab("Count")
+  ylab("Count of Words")
 ```
 
 ```{r}
@@ -158,7 +161,7 @@ fig_company_count <- tidy_words_df %>%
   geom_point(size = 4, color = "orange") +
   theme_classic() +
   xlab("Top 20 Words") +
-  ylab("Count")
+  ylab("Count of Companies")
 
 ```
 
@@ -181,5 +184,17 @@ ggsave(
   limitsize = TRUE
 )
 
-```
+ggsave(
+  "figure_1.eps",
+  plot = fig_marketing,
+  device = "eps",
+  path = here::here("output"),
+  scale = 1,
+  width = 16.7,
+  height = 20.6,
+  units = c("cm"),
+  dpi = 300,
+  limitsize = TRUE
+)
 
+```
