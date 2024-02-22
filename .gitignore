@@ -47,3 +47,9 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+# open refine folder
+openrefine-3.7.4/
+
+# code output files
+output/
